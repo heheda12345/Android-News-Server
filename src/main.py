@@ -1,7 +1,11 @@
 import user
-from flask import request
-from flask import Flask
+from flask import *
+from flask_api import status
+import os
+
 app = Flask(__name__)
+app.config['UPLOADED_ICONSET_DEST'] = '/home/gznews/icon'
+user.setapp(app)
 
 
 @app.route('/')
@@ -15,9 +19,9 @@ def login():
     passwd = request.form['passwd']
     print("login: {} {}".format(name, passwd))
     if user.valid_login(name, passwd):
-        return "Success"
+        return jsonify({"msg": "Success"})
     else:
-        return "Fail"
+        return jsonify({"msg": "Wrong username or password"}), status.HTTP_401_UNAUTHORIZED
 
 @app.route('/register',  methods=['POST'])
 def register():
@@ -25,22 +29,33 @@ def register():
     passwd = request.form['passwd']
     print("register: {} {}".format(name, passwd))
     if user.has_name(name):
-        return "FailUserNameUsed"
+        return jsonify({"msg": "Username is used"}), status.HTTP_401_UNAUTHORIZED
     else:
         user.do_register(name, passwd)
-        return "Success"
+        return jsonify({"msg": "Success"})
 
+@app.route('/uploadIcon',  methods=['POST'])
+def uploadIcon():
+    print(request.files)
+    name = request.form['name']
+    icon = request.files['icon']
+    if not user.has_name(name):
+        return jsonify({"msg": "No such user"}), status.HTTP_401_UNAUTHORIZED
+    user.save_icon(name, icon)
+    return jsonify({"msg": "Success"})
 
+@app.route('/getIcon')
+def get_icon():
+    print(request.args)
+    name = request.args.get('name')
+    if not user.has_name(name):
+        return jsonify({"msg": "No such user"}), status.HTTP_401_UNAUTHORIZED
+    icon_path = user.get_icon(name)
+    if icon_path is None:
+        return jsonify({"msg": "No icon"}), status.HTTP_401_UNAUTHORIZED
+    print("get icon from " + icon_path)
+    return send_from_directory(app.config['UPLOADED_ICONSET_DEST'], icon_path)
 
-# @app.route('/user/<username>')
-# def show_user_profile(username):
-#     # show the user profile for that user
-#     return 'User %s' % username
-
-# @app.route('/post/<int:post_id>')
-# def show_post(post_id):
-#     # show the post with the given id, the id is an integer
-#     return 'Post %d' % post_id
 
 if __name__ == '__main__':
     user.do_register("heheda", "123456")
