@@ -44,18 +44,37 @@ def uploadIcon():
     user.save_icon(name, icon)
     return jsonify({"msg": "Success"})
 
-@app.route('/getIcon')
+@app.route('/getIcon', methods=['GET'])
 def get_icon():
     print(request.args)
     name = request.args.get('name')
+    needLarge = (request.args.get('size').strip() == 'large')
     if not user.has_name(name):
         return jsonify({"msg": "No such user"}), status.HTTP_401_UNAUTHORIZED
-    icon_path = user.get_icon(name)
+    icon_path = user.get_icon(name, needLarge)
     if icon_path is None:
         return jsonify({"msg": "No icon"}), status.HTTP_401_UNAUTHORIZED
     print("get icon from " + icon_path)
     return send_from_directory(app.config['UPLOADED_ICONSET_DEST'], icon_path)
 
+@app.route('/postComment', methods=['post'])
+def post_comment():
+    name = request.form['name']
+    newsID = request.form['newsID']
+    text = request.form['text']
+    print("postComment: {} {} {}".format(name, newsID, text))
+    if not user.has_name(name):
+        return jsonify({"msg": "No such user"}), status.HTTP_401_UNAUTHORIZED
+    else:
+        user.save_comment(name, newsID, text)
+        return jsonify({"msg": "Success"})
+
+@app.route('/getComment', methods=['GET'])
+def get_comment():
+    print(request.args)
+    newsID = request.args.get("newsID")
+    comments = user.get_comment(newsID)
+    return jsonify({"msg": comments})
 
 if __name__ == '__main__':
     user.do_register("heheda", "123456")
